@@ -1,0 +1,32 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Receita {
+  id            Int      @id @default(autoincrement())
+  nome          String
+  descricao     String
+  data_registro DateTime @default(now())
+  custo         Decimal  @db.Decimal(10, 2)
+  tipo_receita  String   @db.Char(1)
+
+  @@map("receita")
+}
+
+model Usuario {
+  id       Int     @id @default(autoincrement())
+  nome     String
+  login    String  @unique
+  senha    String
+  situacao Boolean @default(true)
+
+  @@map("usuario")
+}

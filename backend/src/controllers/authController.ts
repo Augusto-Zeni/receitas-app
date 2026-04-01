@@ -3,7 +3,11 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import prisma from '../prisma'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'receitas-secret'
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET
+  if (!secret) throw new Error('JWT_SECRET não configurado')
+  return secret
+}
 
 export async function login(req: Request, res: Response) {
   const { login, senha } = req.body
@@ -25,6 +29,6 @@ export async function login(req: Request, res: Response) {
     return
   }
 
-  const token = jwt.sign({ userId: usuario.id }, JWT_SECRET, { expiresIn: '8h' })
+  const token = jwt.sign({ userId: usuario.id }, getJwtSecret(), { expiresIn: '8h' })
   res.json({ token, usuario: { id: usuario.id, nome: usuario.nome, login: usuario.login } })
 }

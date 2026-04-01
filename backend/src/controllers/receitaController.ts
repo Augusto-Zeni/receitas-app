@@ -1,6 +1,14 @@
 import { Request, Response } from 'express'
 import prisma from '../prisma'
 
+const TIPOS_VALIDOS = ['D', 'S'] as const
+
+function parseId(param: string | string[]): number | null {
+  if (Array.isArray(param)) return null
+  const id = Number(param)
+  return Number.isInteger(id) && id > 0 ? id : null
+}
+
 export async function listar(req: Request, res: Response) {
   const { tipo_receita, nome } = req.query
 
@@ -16,7 +24,11 @@ export async function listar(req: Request, res: Response) {
 }
 
 export async function buscarPorId(req: Request, res: Response) {
-  const id = Number(req.params.id)
+  const id = parseId(req.params.id)
+  if (id === null) {
+    res.status(400).json({ error: 'ID inválido' })
+    return
+  }
   const receita = await prisma.receita.findUnique({ where: { id } })
 
   if (!receita) {
@@ -35,7 +47,7 @@ export async function criar(req: Request, res: Response) {
     return
   }
 
-  if (!['D', 'S'].includes(tipo_receita)) {
+  if (!TIPOS_VALIDOS.includes(tipo_receita)) {
     res.status(400).json({ error: 'tipo_receita deve ser D (Doce) ou S (Salgado)' })
     return
   }
@@ -48,7 +60,11 @@ export async function criar(req: Request, res: Response) {
 }
 
 export async function atualizar(req: Request, res: Response) {
-  const id = Number(req.params.id)
+  const id = parseId(req.params.id)
+  if (id === null) {
+    res.status(400).json({ error: 'ID inválido' })
+    return
+  }
   const { nome, descricao, custo, tipo_receita } = req.body
 
   const existe = await prisma.receita.findUnique({ where: { id } })
@@ -57,7 +73,7 @@ export async function atualizar(req: Request, res: Response) {
     return
   }
 
-  if (tipo_receita && !['D', 'S'].includes(tipo_receita)) {
+  if (tipo_receita && !TIPOS_VALIDOS.includes(tipo_receita)) {
     res.status(400).json({ error: 'tipo_receita deve ser D (Doce) ou S (Salgado)' })
     return
   }
@@ -76,7 +92,11 @@ export async function atualizar(req: Request, res: Response) {
 }
 
 export async function remover(req: Request, res: Response) {
-  const id = Number(req.params.id)
+  const id = parseId(req.params.id)
+  if (id === null) {
+    res.status(400).json({ error: 'ID inválido' })
+    return
+  }
 
   const existe = await prisma.receita.findUnique({ where: { id } })
   if (!existe) {

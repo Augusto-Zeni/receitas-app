@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'receitas-secret'
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET
+  if (!secret) throw new Error('JWT_SECRET não configurado')
+  return secret
+}
 
 export interface AuthRequest extends Request {
   userId?: number
@@ -16,7 +20,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 
   const token = authHeader.split(' ')[1]
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { userId: number }
+    const payload = jwt.verify(token, getJwtSecret()) as { userId: number }
     req.userId = payload.userId
     next()
   } catch {

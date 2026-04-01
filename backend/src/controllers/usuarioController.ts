@@ -2,6 +2,12 @@ import { Request, Response } from 'express'
 import bcrypt from 'bcrypt'
 import prisma from '../prisma'
 
+function parseId(param: string | string[]): number | null {
+  if (Array.isArray(param)) return null
+  const id = Number(param)
+  return Number.isInteger(id) && id > 0 ? id : null
+}
+
 export async function listar(req: Request, res: Response) {
   const usuarios = await prisma.usuario.findMany({
     select: { id: true, nome: true, login: true, situacao: true },
@@ -11,7 +17,11 @@ export async function listar(req: Request, res: Response) {
 }
 
 export async function buscarPorId(req: Request, res: Response) {
-  const id = Number(req.params.id)
+  const id = parseId(req.params.id)
+  if (id === null) {
+    res.status(400).json({ error: 'ID inválido' })
+    return
+  }
   const usuario = await prisma.usuario.findUnique({
     where: { id },
     select: { id: true, nome: true, login: true, situacao: true },
@@ -49,7 +59,11 @@ export async function criar(req: Request, res: Response) {
 }
 
 export async function atualizar(req: Request, res: Response) {
-  const id = Number(req.params.id)
+  const id = parseId(req.params.id)
+  if (id === null) {
+    res.status(400).json({ error: 'ID inválido' })
+    return
+  }
   const { nome, login, senha, situacao } = req.body
 
   const existe = await prisma.usuario.findUnique({ where: { id } })
@@ -83,7 +97,11 @@ export async function atualizar(req: Request, res: Response) {
 }
 
 export async function remover(req: Request, res: Response) {
-  const id = Number(req.params.id)
+  const id = parseId(req.params.id)
+  if (id === null) {
+    res.status(400).json({ error: 'ID inválido' })
+    return
+  }
 
   const existe = await prisma.usuario.findUnique({ where: { id } })
   if (!existe) {

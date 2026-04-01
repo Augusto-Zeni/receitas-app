@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -6,6 +6,7 @@ import * as z from 'zod/v4'
 import { toast } from 'sonner'
 
 import api from '@/lib/api'
+import { parseBRL, formatBRL } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 import type { Receita } from '@/types'
 import { Button } from '@/components/ui/button'
@@ -45,10 +46,7 @@ import {
 const schema = z.object({
   nome: z.string().min(1, 'Nome obrigatório'),
   descricao: z.string().min(1, 'Descrição obrigatória'),
-  custo: z.preprocess(
-    (v) => (v === '' ? undefined : Number(v)),
-    z.number({ error: 'Custo inválido' }).positive('Custo deve ser positivo')
-  ),
+  custo: z.number({ error: 'Custo inválido' }).positive('Custo deve ser positivo'),
   tipo_receita: z.enum(['D', 'S']),
 })
 
@@ -72,12 +70,11 @@ export default function Receitas() {
   const [deleting, setDeleting] = useState(false)
 
   const form = useForm<FormValues>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(schema) as any,
+    resolver: zodResolver(schema),
     defaultValues: { nome: '', descricao: '', custo: 0, tipo_receita: 'D' },
   })
 
-  async function fetchReceitas() {
+  const fetchReceitas = useCallback(async () => {
     setLoading(true)
     try {
       const params: Record<string, string> = {}
@@ -90,12 +87,11 @@ export default function Receitas() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [search, filterTipo])
 
   useEffect(() => {
     void fetchReceitas()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, filterTipo])
+  }, [fetchReceitas])
 
   function openCreate() {
     setEditTarget(null)
@@ -148,13 +144,6 @@ export default function Receitas() {
   function handleLogout() {
     logout()
     navigate('/')
-  }
-
-  function formatCurrency(value: number | string) {
-    return Number(value).toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    })
   }
 
   function formatDate(dateStr: string) {
@@ -240,7 +229,7 @@ export default function Receitas() {
                         {r.tipo_receita === 'D' ? 'Doce' : 'Salgado'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatCurrency(r.custo)}</TableCell>
+                    <TableCell>{formatBRL(Number(r.custo))}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatDate(r.data_registro)}
                     </TableCell>
@@ -276,7 +265,7 @@ export default function Receitas() {
             </DialogTitle>
           </DialogHeader>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit as Parameters<typeof form.handleSubmit>[0])} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="nome"
@@ -309,15 +298,16 @@ export default function Receitas() {
                   name="custo"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Custo (R$)</FormLabel>
+                      <FormLabel>Custo</FormLabel>
                       <FormControl>
                         <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
-                          {...field}
-                          onChange={(e) => field.onChange(e.target.value)}
+                          inputMode="numeric"
+                          placeholder="R$ 0,00"
+                          value={field.value ? formatBRL(field.value) : ''}
+                          onChange={(e) => {
+                            field.onChange(parseBRL(e.target.value))
+                          }}
+                          onBlur={field.onBlur}
                         />
                       </FormControl>
                       <FormMessage />

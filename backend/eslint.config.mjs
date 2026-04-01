@@ -18,7 +18,6 @@ export default [
     rules: {
       ...tseslint.configs.recommended.rules,
       semi: ['error', 'never'],
-      '@typescript-eslint/semi': ['error', 'never'],
       quotes: ['error', 'single'],
       'no-trailing-spaces': 'error',
       'eol-last': ['error', 'always']

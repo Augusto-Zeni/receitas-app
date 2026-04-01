@@ -20,12 +20,15 @@ async function main() {
       { nome: 'Pudim de Leite', descricao: 'Pudim de leite condensado com calda de caramelo', custo: 25.00, tipo_receita: 'D' },
       { nome: 'Pastel de Forno', descricao: 'Pastel de forno recheado com presunto e queijo', custo: 14.00, tipo_receita: 'S' },
     ],
+    skipDuplicates: true,
   });
 
   const senhaHash = await bcrypt.hash('admin123', 10);
 
-  await prisma.usuario.create({
-    data: {
+  await prisma.usuario.upsert({
+    where: { login: 'admin' },
+    update: {},
+    create: {
       nome: 'Administrador',
       login: 'admin',
       senha: senhaHash,

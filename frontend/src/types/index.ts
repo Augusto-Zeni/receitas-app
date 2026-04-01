@@ -10,7 +10,7 @@ export interface Receita {
   nome: string
   descricao: string
   data_registro: string
-  custo: number | string
+  custo: string
   tipo_receita: 'D' | 'S'
 }
 

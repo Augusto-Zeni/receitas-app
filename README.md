@@ -246,6 +246,9 @@ JWT_SECRET=<gere-uma-chave-segura-aqui>
 # Executar migrações do banco de dados
 npx prisma migrate deploy
 
+# Gerar o Prisma Client (obrigatório antes do seed)
+npx prisma generate
+
 # Popular o banco com dados iniciais (usuário admin)
 npx prisma db seed
 
@@ -253,7 +256,7 @@ npx prisma db seed
 npm run build
 
 # Iniciar com PM2 (manter em execução mesmo após reinicialização)
-pm2 start dist/server.js --name receitas-backend
+pm2 start dist/src/server.js --name receitas-backend
 pm2 save
 pm2 startup   # Seguir as instruções exibidas no terminal
 ```
@@ -299,7 +302,7 @@ server {
     server_name <IP_DA_VM>;   # ou seu domínio
 
     # Servir o frontend (arquivos estáticos)
-    root /home/ubuntu/receitas-app/frontend/dist;
+    root /home/<seu-usuario>/receitas-app/frontend/dist;
     index index.html;
 
     location / {
@@ -445,6 +448,7 @@ cd backend
 npm install
 cp .env.example .env   # ajuste DATABASE_URL se necessário
 npx prisma migrate dev
+npx prisma generate
 npx prisma db seed
 npm run dev            # http://localhost:3000
 

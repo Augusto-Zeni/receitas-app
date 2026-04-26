@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import prisma from '../prisma'
+import { enviarEmailReceita } from '../services/emailService'
 
 const TIPOS_VALIDOS = ['D', 'S'] as const
 
@@ -9,13 +10,35 @@ function parseId(param: string | string[]): number | null {
   return Number.isInteger(id) && id > 0 ? id : null
 }
 
+function parseDate(value: unknown): Date | null {
+  if (!value || typeof value !== 'string') return null
+  const d = new Date(value)
+  return isNaN(d.getTime()) ? null : d
+}
+
 export async function listar(req: Request, res: Response) {
-  const { tipo_receita, nome } = req.query
+  const { tipo_receita, nome, data_inicio, data_fim } = req.query
+
+  const dataInicio = parseDate(data_inicio)
+  const dataFim = parseDate(data_fim)
+
+  // When data_fim is provided, include the entire day
+  const dataFimFinal = dataFim
+    ? new Date(new Date(dataFim).setHours(23, 59, 59, 999))
+    : null
 
   const receitas = await prisma.receita.findMany({
     where: {
       ...(tipo_receita ? { tipo_receita: String(tipo_receita) } : {}),
       ...(nome ? { nome: { contains: String(nome), mode: 'insensitive' } } : {}),
+      ...(dataInicio || dataFimFinal
+        ? {
+            data_registro: {
+              ...(dataInicio ? { gte: dataInicio } : {}),
+              ...(dataFimFinal ? { lte: dataFimFinal } : {}),
+            },
+          }
+        : {}),
     },
     orderBy: { data_registro: 'desc' },
   })
@@ -56,6 +79,11 @@ export async function criar(req: Request, res: Response) {
     data: { nome, descricao, custo, tipo_receita },
   })
 
+  const destinatario = process.env.EMAIL_NOTIFICACAO
+  if (destinatario) {
+    void enviarEmailReceita('criada', { ...receita, custo: String(receita.custo), tipo_receita: receita.tipo_receita as 'D' | 'S' }, destinatario)
+  }
+
   res.status(201).json(receita)
 }
 
@@ -87,6 +115,11 @@ export async function atualizar(req: Request, res: Response) {
       ...(tipo_receita !== undefined ? { tipo_receita } : {}),
     },
   })
+
+  const destinatario = process.env.EMAIL_NOTIFICACAO
+  if (destinatario) {
+    void enviarEmailReceita('atualizada', { ...receita, custo: String(receita.custo), tipo_receita: receita.tipo_receita as 'D' | 'S' }, destinatario)
+  }
 
   res.json(receita)
 }

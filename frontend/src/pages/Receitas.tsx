@@ -4,6 +4,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod/v4'
 import { toast } from 'sonner'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 import api from '@/lib/api'
 import { parseBRL, formatBRL } from '@/lib/utils'
@@ -64,6 +66,8 @@ export default function Receitas() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filterTipo, setFilterTipo] = useState<'all' | 'D' | 'S'>('all')
+  const [filterDataInicio, setFilterDataInicio] = useState('')
+  const [filterDataFim, setFilterDataFim] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Receita | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Receita | null>(null)
@@ -80,6 +84,8 @@ export default function Receitas() {
       const params: Record<string, string> = {}
       if (search) params.nome = search
       if (filterTipo !== 'all') params.tipo_receita = filterTipo
+      if (filterDataInicio) params.data_inicio = filterDataInicio
+      if (filterDataFim) params.data_fim = filterDataFim
       const { data } = await api.get<Receita[]>('/receitas', { params })
       setReceitas(data)
     } catch {
@@ -87,7 +93,7 @@ export default function Receitas() {
     } finally {
       setLoading(false)
     }
-  }, [search, filterTipo])
+  }, [search, filterTipo, filterDataInicio, filterDataFim])
 
   useEffect(() => {
     void fetchReceitas()
@@ -150,6 +156,69 @@ export default function Receitas() {
     return new Date(dateStr).toLocaleDateString('pt-BR')
   }
 
+  function limparFiltros() {
+    setSearch('')
+    setFilterTipo('all')
+    setFilterDataInicio('')
+    setFilterDataFim('')
+  }
+
+  function exportarPDF() {
+    const doc = new jsPDF()
+
+    doc.setFontSize(16)
+    doc.text('Relatório de Receitas', 14, 16)
+
+    const filtrosAtivos: string[] = []
+    if (search) filtrosAtivos.push(`Nome: "${search}"`)
+    if (filterTipo !== 'all') filtrosAtivos.push(`Tipo: ${filterTipo === 'D' ? 'Doce' : 'Salgado'}`)
+    if (filterDataInicio) filtrosAtivos.push(`De: ${new Date(filterDataInicio).toLocaleDateString('pt-BR')}`)
+    if (filterDataFim) filtrosAtivos.push(`Até: ${new Date(filterDataFim).toLocaleDateString('pt-BR')}`)
+
+    let startY = 24
+    if (filtrosAtivos.length > 0) {
+      doc.setFontSize(9)
+      doc.setTextColor(100)
+      doc.text(`Filtros: ${filtrosAtivos.join(' | ')}`, 14, startY)
+      startY += 6
+      doc.setTextColor(0)
+    }
+
+    doc.setFontSize(9)
+    doc.text(
+      `Gerado em ${new Date().toLocaleString('pt-BR')} — ${receitas.length} registro(s)`,
+      14,
+      startY,
+    )
+
+    autoTable(doc, {
+      startY: startY + 4,
+      head: [['Nome', 'Descrição', 'Tipo', 'Custo', 'Data']],
+      body: receitas.map((r) => [
+        r.nome,
+        r.descricao.length > 60 ? r.descricao.slice(0, 57) + '...' : r.descricao,
+        r.tipo_receita === 'D' ? 'Doce' : 'Salgado',
+        formatBRL(Number(r.custo)),
+        formatDate(r.data_registro),
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [30, 30, 30] },
+      columnStyles: {
+        0: { cellWidth: 38 },
+        1: { cellWidth: 70 },
+        2: { cellWidth: 22 },
+        3: { cellWidth: 28 },
+        4: { cellWidth: 28 },
+      },
+    })
+
+    doc.save('receitas.pdf')
+    toast.success('PDF exportado')
+  }
+
+  const temFiltroAtivo =
+    search || filterTipo !== 'all' || filterDataInicio || filterDataFim
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border px-6 py-4 flex items-center justify-between">
@@ -164,31 +233,63 @@ export default function Receitas() {
 
       <main className="px-6 py-6 max-w-6xl mx-auto space-y-4">
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <div className="flex gap-2 flex-1">
-            <Input
-              placeholder="Buscar por nome..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="max-w-xs"
-            />
-            <Select
-              value={filterTipo}
-              onValueChange={(v) => setFilterTipo(v as 'all' | 'D' | 'S')}
-            >
-              <SelectTrigger className="w-36">
-                <SelectValue>
-                  {{ all: 'Todos', D: 'Doce', S: 'Salgado' }[filterTipo]}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="D">Doce</SelectItem>
-                <SelectItem value="S">Salgado</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
+            <div className="flex gap-2 flex-wrap">
+              <Input
+                placeholder="Buscar por nome..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="max-w-xs"
+              />
+              <Select
+                value={filterTipo}
+                onValueChange={(v) => setFilterTipo(v as 'all' | 'D' | 'S')}
+              >
+                <SelectTrigger className="w-36">
+                  <SelectValue>
+                    {{ all: 'Todos os tipos', D: 'Doce', S: 'Salgado' }[filterTipo]}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  <SelectItem value="D">Doce</SelectItem>
+                  <SelectItem value="S">Salgado</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div className="flex items-center gap-1">
+                <Input
+                  type="date"
+                  aria-label="Data início"
+                  value={filterDataInicio}
+                  onChange={(e) => setFilterDataInicio(e.target.value)}
+                  className="w-40"
+                />
+                <span className="text-muted-foreground text-sm">até</span>
+                <Input
+                  type="date"
+                  aria-label="Data fim"
+                  value={filterDataFim}
+                  onChange={(e) => setFilterDataFim(e.target.value)}
+                  className="w-40"
+                />
+              </div>
+
+              {temFiltroAtivo && (
+                <Button variant="ghost" size="sm" onClick={limparFiltros}>
+                  Limpar filtros
+                </Button>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={exportarPDF} disabled={receitas.length === 0}>
+                Exportar PDF
+              </Button>
+              <Button onClick={openCreate}>Nova receita</Button>
+            </div>
           </div>
-          <Button onClick={openCreate}>Nova receita</Button>
         </div>
 
         {/* Table */}

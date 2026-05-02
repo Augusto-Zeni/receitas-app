@@ -376,6 +376,72 @@ curl http://localhost:3000/receitas
 
 ---
 
+### Atualização da Aplicação na VM
+
+Use estes comandos sempre que fizer push de novas alterações no repositório.
+
+#### 1. Acessar a VM e ir ao diretório do projeto
+
+```bash
+ssh usuario@<IP_DA_VM>
+cd /home/ubuntu/receitas-app   # ajuste o caminho se necessário
+```
+
+#### 2. Baixar as alterações do repositório
+
+```bash
+git pull origin main
+```
+
+#### 3. Atualizar o Backend
+
+```bash
+cd backend
+
+# Instalar novas dependências (se houver)
+npm install
+
+# Aplicar novas migrações do banco (se houver)
+npx prisma migrate deploy
+
+# Gerar o Prisma Client atualizado
+npx prisma generate
+
+# Recompilar o TypeScript
+npm run build
+
+# Reiniciar o processo no PM2
+pm2 restart receitas-backend
+```
+
+#### 4. Atualizar o Frontend
+
+```bash
+cd ../frontend
+
+# Instalar novas dependências (se houver)
+npm install
+
+# Gerar novo build de produção
+npm run build
+# O Nginx serve os arquivos de frontend/dist/ automaticamente — não é necessário reiniciá-lo
+```
+
+#### 5. Verificar que tudo continua funcionando
+
+```bash
+# Verificar status do backend
+pm2 status
+pm2 logs receitas-backend --lines 20
+
+# Teste rápido da API
+curl http://localhost:3000/receitas
+```
+
+> **Dica:** Se apenas o frontend foi alterado, pule o passo 3. Se apenas o backend foi alterado, pule o passo 4.
+
+---
+
 ## Tempos Gastos
 
 | Etapa | Tempo |

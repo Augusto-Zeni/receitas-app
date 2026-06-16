@@ -19,7 +19,8 @@ jobs:
         working-directory: /home/univates/receitas-app
         run: |
           set -e
-          git pull origin main
+          git fetch origin main
+          git reset --hard origin/main
           docker compose -f docker-compose.prd.yml up --build -d
           echo "PRD atualizado com sucesso"
           docker compose -f docker-compose.prd.yml ps

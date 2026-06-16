@@ -19,7 +19,8 @@ jobs:
         working-directory: /home/univates/receitas-app
         run: |
           set -e
-          git pull origin develop
+          git fetch origin develop
+          git reset --hard origin/develop
           docker compose -f docker-compose.hml.yml up --build -d
           echo "HML atualizado com sucesso"
           docker compose -f docker-compose.hml.yml ps

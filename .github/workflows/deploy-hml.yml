@@ -11,24 +11,17 @@ jobs:
 
   deploy:
     name: Deploy para Homologação (porta 9000)
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: ci
     environment: homologacao
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VM_SSH_HOST }}
-          username: ${{ secrets.VM_SSH_USER }}
-          password: ${{ secrets.VM_SSH_PASSWORD }}
-          debug: true
-          envs: HML_JWT_SECRET
-          script: |
-            set -e
-            cd /home/${{ secrets.VM_SSH_USER }}/receitas-app
-            git pull origin develop
-            docker compose -f docker-compose.hml.yml up --build -d
-            echo "✅ HML atualizado com sucesso"
-            docker compose -f docker-compose.hml.yml ps
+      - name: Deploy HML
+        working-directory: /home/univates/receitas-app
+        run: |
+          set -e
+          git pull origin develop
+          docker compose -f docker-compose.hml.yml up --build -d
+          echo "HML atualizado com sucesso"
+          docker compose -f docker-compose.hml.yml ps
         env:
           HML_JWT_SECRET: ${{ secrets.HML_JWT_SECRET }}

@@ -11,23 +11,17 @@ jobs:
 
   deploy:
     name: Deploy para Produção (porta 9001)
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: ci
     environment: producao
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VM_SSH_HOST }}
-          username: ${{ secrets.VM_SSH_USER }}
-          password: ${{ secrets.VM_SSH_PASSWORD }}
-          envs: PRD_JWT_SECRET
-          script: |
-            set -e
-            cd /home/${{ secrets.VM_SSH_USER }}/receitas-app
-            git pull origin main
-            docker compose -f docker-compose.prd.yml up --build -d
-            echo "✅ PRD atualizado com sucesso"
-            docker compose -f docker-compose.prd.yml ps
+      - name: Deploy PRD
+        working-directory: /home/univates/receitas-app
+        run: |
+          set -e
+          git pull origin main
+          docker compose -f docker-compose.prd.yml up --build -d
+          echo "PRD atualizado com sucesso"
+          docker compose -f docker-compose.prd.yml ps
         env:
           PRD_JWT_SECRET: ${{ secrets.PRD_JWT_SECRET }}

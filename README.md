@@ -6,6 +6,12 @@
 
 ## Sumário
 
+- [Arquitetura CI/CD](#arquitetura-cicd)
+  - [Diagrama da Arquitetura](#diagrama-da-arquitetura)
+  - [Tecnologias Utilizadas](#tecnologias-utilizadas)
+  - [Fluxo do Pipeline](#fluxo-do-pipeline)
+  - [Configuração do GitHub Actions](#configuração-do-github-actions)
+  - [Primeiro Deploy na VM](#primeiro-deploy-na-vm)
 - [Aplicação](#aplicação)
   - [Modelagem do Banco de Dados](#modelagem-do-banco-de-dados)
   - [Interface Desenvolvida](#interface-desenvolvida)
@@ -16,6 +22,218 @@
   - [URL de Acesso](#url-de-acesso)
 - [Tempos Gastos](#tempos-gastos)
 - [Entrega](#entrega)
+
+---
+
+## Arquitetura CI/CD
+
+### Diagrama da Arquitetura
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  DESENVOLVEDOR                                                              │
+│                                                                             │
+│  [Trello — Registro de Mudança]                                             │
+│       │                                                                     │
+│       ▼                                                                     │
+│  git commit + git push                                                      │
+└──────────────────────────┬──────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  GITHUB (Controle de Versão + CI/CD)                                        │
+│                                                                             │
+│  Repositório Git                                                            │
+│  ├── branch: feature/* ──► CI (testes + lint + build)                      │
+│  ├── branch: develop   ──► CI → Deploy HML automático                      │
+│  └── branch: main      ──► CI → Deploy PRD automático                      │
+│                                                                             │
+│  GitHub Actions — Etapas do CI:                                             │
+│  ┌────────────────────────────────────────────────────────────────┐         │
+│  │  Job 1: Testes (Jest)     — 20 testes automatizados            │         │
+│  │  Job 2: Lint (ESLint)     — Análise de qualidade de código     │         │
+│  │  Job 3: Build             — Compila backend (tsc) + frontend   │         │
+│  └────────────────────────────────────────────────────────────────┘         │
+│                                                                             │
+│  GitHub Secrets:                                                             │
+│  VM_SSH_HOST, VM_SSH_USER, VM_SSH_PRIVATE_KEY                               │
+│  HML_JWT_SECRET, PRD_JWT_SECRET                                             │
+└──────────────────────────┬──────────────────────────────────────────────────┘
+                           │ SSH (deploy automatizado)
+                           ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  VM UNIVATES — IP: 177.44.248.73 — Ubuntu Linux                             │
+│  Docker Engine + Docker Compose                                             │
+│                                                                             │
+│  ┌──────────────────────────────┐  ┌──────────────────────────────┐         │
+│  │  HOMOLOGAÇÃO (porta 9000)    │  │  PRODUÇÃO (porta 9001)        │         │
+│  │  docker-compose.hml.yml      │  │  docker-compose.prd.yml       │         │
+│  │                              │  │                              │         │
+│  │  ┌──────────────────────┐    │  │  ┌──────────────────────┐    │         │
+│  │  │ hml-frontend (nginx) │    │  │  │ prd-frontend (nginx) │    │         │
+│  │  │ porta 9000:80        │    │  │  │ porta 9001:80        │    │         │
+│  │  └──────────┬───────────┘    │  │  └──────────┬───────────┘    │         │
+│  │             │ proxy /api     │  │             │ proxy /api     │         │
+│  │  ┌──────────▼───────────┐    │  │  ┌──────────▼───────────┐    │         │
+│  │  │ hml-backend (Node.js)│    │  │  │ prd-backend (Node.js)│    │         │
+│  │  │ Express 5 — porta 3000    │  │  │ Express 5 — porta 3000    │         │
+│  │  └──────────┬───────────┘    │  │  └──────────┬───────────┘    │         │
+│  │             │ Prisma ORM     │  │             │ Prisma ORM     │         │
+│  │  ┌──────────▼───────────┐    │  │  ┌──────────▼───────────┐    │         │
+│  │  │ hml-db (PostgreSQL)  │    │  │  │ prd-db (PostgreSQL)  │    │         │
+│  │  │ volume: hml_pg_data  │    │  │  │ volume: prd_pg_data  │    │         │
+│  │  └──────────────────────┘    │  │  └──────────────────────┘    │         │
+│  │                              │  │                              │         │
+│  │  rede: hml-network           │  │  rede: prd-network           │         │
+│  └──────────────────────────────┘  └──────────────────────────────┘         │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Tecnologias Utilizadas
+
+| Categoria | Tecnologia | Função |
+|-----------|-----------|--------|
+| **Ambiente** | VM Univates (Ubuntu Linux) | Servidor de hospedagem |
+| **Contêineres** | Docker Engine + Docker Compose | Orquestração dos ambientes |
+| **SO Base** | Ubuntu Linux (VM) / Alpine Linux (containers) | Sistema operacional |
+| **Linguagem** | Node.js 22 + TypeScript | Backend |
+| **Linguagem** | React 19 + TypeScript + Vite | Frontend |
+| **Banco de Dados** | PostgreSQL 16 | Persistência de dados |
+| **ORM / Versionamento DB** | Prisma 7 (migrate deploy) | Migrações de banco de dados |
+| **Proxy / Frontend** | Nginx (Alpine) | Servir SPA + proxy reverso para API |
+| **Controle de Mudança** | Trello | Registro e rastreamento de mudanças |
+| **Versionamento** | Git + GitHub | Controle de versão do código |
+| **CI/CD** | GitHub Actions | Integração e entrega contínua |
+| **Testes** | Jest + ts-jest (20 testes) | Testes automatizados do backend |
+| **Qualidade de Código** | ESLint (backend + frontend) | Análise estática de código |
+| **Autenticação** | JWT + bcrypt | Segurança da API |
+
+### Fluxo do Pipeline
+
+#### A) Registro de Mudança
+Criar card no [Trello](https://trello.com) descrevendo a tarefa. Criar branch a partir de `develop`:
+```bash
+git checkout develop
+git pull origin develop
+git checkout -b feature/nome-da-feature
+```
+
+#### B) Implementação
+Desenvolver a feature na branch criada. Commits devem referenciar o card do Trello no título.
+
+#### C) Versionamento
+```bash
+git add .
+git commit -m "feat: descrição da mudança [Trello: #CARD]"
+git push origin feature/nome-da-feature
+```
+Abrir Pull Request para `develop` no GitHub.
+
+#### D) Testes Automatizados
+Ao abrir PR ou fazer push, GitHub Actions executa automaticamente:
+- **20 testes Jest** cobrindo os controllers de receitas (T01-T14) e autenticação (T15-T20)
+- Relatório com cobertura de código exibido no log do CI
+
+#### E) Análise de Qualidade de Código
+ESLint roda automaticamente no CI em paralelo com os testes:
+- Análise do backend (`src/`) com TypeScript ESLint
+- Análise do frontend com React Hooks + Refresh rules
+- Build falha se houver erros de lint
+
+#### F) Atualização do Ambiente de Homologação
+Ao fazer merge do PR para `develop`, o workflow `deploy-hml.yml` executa automaticamente:
+```
+push → develop → CI (test + lint + build) → SSH na VM → git pull + docker compose up
+```
+Aplicação disponível em: `http://177.44.248.73:9000`
+
+#### G) Atualização do Ambiente de Produção
+Ao fazer merge de `develop` para `main`, o workflow `deploy-prd.yml` executa automaticamente:
+```
+push → main → CI (test + lint + build) → SSH na VM → git pull + docker compose up
+```
+Aplicação disponível em: `http://177.44.248.73:9001`
+
+#### H) Versionamento do Banco de Dados
+O Prisma gerencia as migrações via `prisma migrate deploy`, que executa automaticamente no startup de cada container de backend. Novas migrações são criadas localmente com `npx prisma migrate dev` e versionadas no Git junto com o código.
+
+---
+
+### Configuração do GitHub Actions
+
+Adicione os seguintes **Secrets** no repositório GitHub (`Settings > Secrets and variables > Actions`):
+
+| Secret | Valor |
+|--------|-------|
+| `VM_SSH_HOST` | `177.44.248.73` |
+| `VM_SSH_USER` | Usuário SSH da VM (ex: `ubuntu`) |
+| `VM_SSH_PRIVATE_KEY` | Chave SSH privada para acessar a VM |
+| `HML_JWT_SECRET` | Chave JWT para o ambiente de homologação |
+| `PRD_JWT_SECRET` | Chave JWT para o ambiente de produção |
+
+> Para gerar uma chave JWT segura: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"`
+
+Crie também os **Environments** no GitHub (`Settings > Environments`):
+- `homologacao`
+- `producao`
+
+---
+
+### Primeiro Deploy na VM
+
+Execute estes comandos **uma única vez** para preparar a VM:
+
+#### 1. Instalar Docker
+```bash
+# Instalar Docker Engine
+curl -fsSL https://get.docker.com | sudo sh
+
+# Adicionar usuário ao grupo docker (evita sudo)
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Verificar instalação
+docker --version
+docker compose version
+```
+
+#### 2. Clonar o repositório
+```bash
+cd /home/$USER
+git clone https://github.com/<seu-usuario>/receitas-app.git
+cd receitas-app
+```
+
+#### 3. Subir Homologação
+```bash
+export HML_JWT_SECRET="$(node -e "console.log(require('crypto').randomBytes(64).toString('hex'))")"
+docker compose -f docker-compose.hml.yml up --build -d
+```
+
+#### 4. Subir Produção
+```bash
+export PRD_JWT_SECRET="$(node -e "console.log(require('crypto').randomBytes(64).toString('hex'))")"
+docker compose -f docker-compose.prd.yml up --build -d
+```
+
+#### 5. Verificar containers
+```bash
+docker ps
+# Deve mostrar 6 containers: hml-db, hml-backend, hml-frontend, prd-db, prd-backend, prd-frontend
+```
+
+#### 6. Verificar logs
+```bash
+docker logs hml-backend
+docker logs prd-backend
+```
+
+#### URLs de Acesso
+
+| Ambiente | URL |
+|----------|-----|
+| **Homologação** | `http://177.44.248.73:9000` |
+| **Produção** | `http://177.44.248.73:9001` |
 
 ---
 

@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: hml-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: receitas_hml
+    volumes:
+      - hml_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - hml-network
+
+  backend:
+    build:
+      context: ./backend
+    container_name: hml-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/receitas_hml
+      PORT: 3000
+      JWT_SECRET: ${HML_JWT_SECRET:-hml-jwt-secret-change-me-in-production}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - hml-network
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+    container_name: hml-frontend
+    restart: unless-stopped
+    ports:
+      - "9000:80"
+    depends_on:
+      - backend
+    networks:
+      - hml-network
+
+networks:
+  hml-network:
+    driver: bridge
+
+volumes:
+  hml_postgres_data:

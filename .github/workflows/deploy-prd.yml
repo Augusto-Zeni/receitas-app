@@ -20,7 +20,7 @@ jobs:
         with:
           host: ${{ secrets.VM_SSH_HOST }}
           username: ${{ secrets.VM_SSH_USER }}
-          key: ${{ secrets.VM_SSH_PRIVATE_KEY }}
+          password: ${{ secrets.VM_SSH_PASSWORD }}
           envs: PRD_JWT_SECRET
           script: |
             set -e

@@ -21,8 +21,8 @@ jobs:
           set -e
           git fetch origin main
           git reset --hard origin/main
-          docker compose -f docker-compose.prd.yml up --build -d
+          sudo docker compose -f docker-compose.prd.yml up --build -d
           echo "PRD atualizado com sucesso"
-          docker compose -f docker-compose.prd.yml ps
+          sudo docker compose -f docker-compose.prd.yml ps
         env:
           PRD_JWT_SECRET: ${{ secrets.PRD_JWT_SECRET }}

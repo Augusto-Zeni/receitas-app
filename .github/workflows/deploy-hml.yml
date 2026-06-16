@@ -21,8 +21,8 @@ jobs:
           set -e
           git fetch origin develop
           git reset --hard origin/develop
-          docker compose -f docker-compose.hml.yml up --build -d
+          sudo docker compose -f docker-compose.hml.yml up --build -d
           echo "HML atualizado com sucesso"
-          docker compose -f docker-compose.hml.yml ps
+          sudo docker compose -f docker-compose.hml.yml ps
         env:
           HML_JWT_SECRET: ${{ secrets.HML_JWT_SECRET }}

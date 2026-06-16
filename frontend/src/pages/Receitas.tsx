@@ -59,6 +59,23 @@ type FormValues = {
   tipo_receita: 'D' | 'S'
 }
 
+const ENV_LABELS: Record<string, { label: string; className: string }> = {
+  hml: { label: 'HML', className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' },
+  prd: { label: 'PRD', className: 'bg-red-500/20 text-red-400 border-red-500/40' },
+  local: { label: 'LOCAL', className: 'bg-blue-500/20 text-blue-400 border-blue-500/40' },
+}
+
+function EnvBadge() {
+  const env = import.meta.env.VITE_APP_ENV as string | undefined
+  if (!env) return null
+  const config = ENV_LABELS[env] ?? { label: env.toUpperCase(), className: 'bg-muted text-muted-foreground border-border' }
+  return (
+    <span className={`text-xs font-medium px-2 py-0.5 rounded border ${config.className}`}>
+      {config.label}
+    </span>
+  )
+}
+
 export default function Receitas() {
   const navigate = useNavigate()
   const { usuario, logout } = useAuthStore()
@@ -222,7 +239,10 @@ export default function Receitas() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Receitas</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-semibold">Receitas</h1>
+          <EnvBadge />
+        </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">{usuario?.nome}</span>
           <Button variant="outline" size="sm" onClick={handleLogout}>

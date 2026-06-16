@@ -233,7 +233,7 @@ export default function Receitas() {
     toast.success('PDF exportado')
   }
 
-  // console.log('teste CI/CD')
+  console.log('teste CI/CD')
 
   const temFiltroAtivo =
     search || filterTipo !== 'all' || filterDataInicio || filterDataFim

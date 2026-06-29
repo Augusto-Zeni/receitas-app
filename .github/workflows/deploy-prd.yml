@@ -4,25 +4,79 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   ci:
     name: CI
     uses: ./.github/workflows/ci.yml
 
   deploy:
-    name: Deploy para Produção (porta 9001)
+    name: 🚀 Deploy para Produção (porta 9001)
     runs-on: self-hosted
     needs: ci
     environment: producao
     steps:
-      - name: Deploy PRD
+      - name: Login no GitHub Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Atualizar código e pull das imagens
         working-directory: /home/univates/receitas-app
         run: |
           set -e
+          echo "::group::Git — sincronizando branch main"
           git fetch origin main
           git reset --hard origin/main
-          sudo docker compose -f docker-compose.prd.yml up --build -d
-          echo "PRD atualizado com sucesso"
-          sudo docker compose -f docker-compose.prd.yml ps
-        env:
-          PRD_JWT_SECRET: ${{ secrets.PRD_JWT_SECRET }}
+          echo "::endgroup::"
+
+          echo "::group::Docker — pull das imagens"
+          export BACKEND_IMAGE="${{ needs.ci.outputs.backend-image }}"
+          export FRONTEND_IMAGE="${{ needs.ci.outputs.frontend-prd-image }}"
+          export PRD_JWT_SECRET="${{ secrets.PRD_JWT_SECRET }}"
+          sudo -E docker compose -p receitas-prd -f docker-compose.prd.yml pull
+          echo "::endgroup::"
+
+      - name: 🚀 Subir containers
+        working-directory: /home/univates/receitas-app
+        run: |
+          set -e
+          export BACKEND_IMAGE="${{ needs.ci.outputs.backend-image }}"
+          export FRONTEND_IMAGE="${{ needs.ci.outputs.frontend-prd-image }}"
+          export PRD_JWT_SECRET="${{ secrets.PRD_JWT_SECRET }}"
+
+          echo "::group::Docker Compose — subindo serviços"
+          sudo -E docker compose -p receitas-prd -f docker-compose.prd.yml up -d
+          echo "::endgroup::"
+
+          echo "::group::Status dos containers"
+          sudo docker compose -p receitas-prd -f docker-compose.prd.yml ps
+          echo "::endgroup::"
+
+          echo "::notice title=Deploy PRD concluído::Ambiente de produção atualizado na porta 9001"
+
+      - name: Limpar imagens antigas
+        run: sudo docker image prune -f
+
+      - name: Publicar resumo do deploy
+        if: always()
+        run: |
+          echo "## Deploy — Produção" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Campo | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Ambiente** | Produção |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Porta** | \`9001\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Autor** | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Horário** | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Imagens implantadas" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Serviço | Imagem |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Backend** | \`${{ needs.ci.outputs.backend-image }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Frontend** | \`${{ needs.ci.outputs.frontend-prd-image }}\` |" >> $GITHUB_STEP_SUMMARY

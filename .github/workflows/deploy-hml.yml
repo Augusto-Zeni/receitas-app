@@ -4,6 +4,10 @@ on:
   push:
     branches: [develop]
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   ci:
     name: CI
@@ -15,14 +19,64 @@ jobs:
     needs: ci
     environment: homologacao
     steps:
-      - name: Deploy HML
+      - name: Login no GitHub Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Atualizar código e pull das imagens
         working-directory: /home/univates/receitas-app
         run: |
           set -e
+          echo "::group::Git — sincronizando branch develop"
           git fetch origin develop
           git reset --hard origin/develop
-          sudo docker compose -f docker-compose.hml.yml up --build -d
-          echo "HML atualizado com sucesso"
-          sudo docker compose -f docker-compose.hml.yml ps
-        env:
-          HML_JWT_SECRET: ${{ secrets.HML_JWT_SECRET }}
+          echo "::endgroup::"
+
+          echo "::group::Docker — pull das imagens"
+          export BACKEND_IMAGE="${{ needs.ci.outputs.backend-image }}"
+          export FRONTEND_IMAGE="${{ needs.ci.outputs.frontend-hml-image }}"
+          export HML_JWT_SECRET="${{ secrets.HML_JWT_SECRET }}"
+          sudo -E docker compose -p receitas-hml -f docker-compose.hml.yml pull
+          echo "::endgroup::"
+
+      - name: Subir containers
+        working-directory: /home/univates/receitas-app
+        run: |
+          set -e
+          export BACKEND_IMAGE="${{ needs.ci.outputs.backend-image }}"
+          export FRONTEND_IMAGE="${{ needs.ci.outputs.frontend-hml-image }}"
+          export HML_JWT_SECRET="${{ secrets.HML_JWT_SECRET }}"
+
+          echo "::group::Docker Compose — subindo serviços"
+          sudo -E docker compose -p receitas-hml -f docker-compose.hml.yml up -d
+          echo "::endgroup::"
+
+          echo "::group::Status dos containers"
+          sudo docker compose -p receitas-hml -f docker-compose.hml.yml ps
+          echo "::endgroup::"
+
+          echo "::notice title=Deploy HML concluído::Ambiente de homologação atualizado na porta 9000"
+
+      - name: Limpar imagens antigas
+        run: sudo docker image prune -f
+
+      - name: Publicar resumo do deploy
+        if: always()
+        run: |
+          echo "## Deploy — Homologação" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Campo | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Ambiente** | Homologação |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Porta** | \`9000\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Branch** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Autor** | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Horário** | $(date -u '+%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Imagens implantadas" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Serviço | Imagem |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Backend** | \`${{ needs.ci.outputs.backend-image }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Frontend** | \`${{ needs.ci.outputs.frontend-hml-image }}\` |" >> $GITHUB_STEP_SUMMARY

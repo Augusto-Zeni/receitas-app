@@ -12,6 +12,11 @@ jobs:
   ci:
     name: CI
     uses: ./.github/workflows/ci.yml
+    with:
+      push-images: true
+    permissions:
+      contents: read
+      packages: write
 
   deploy:
     name: 🚀 Deploy para Produção (porta 9001)

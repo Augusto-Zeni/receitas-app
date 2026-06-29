@@ -19,7 +19,7 @@ jobs:
       packages: write
 
   deploy:
-    name: 🚀 Deploy para Produção (porta 9001)
+    name: Deploy para Produção (porta 9001)
     runs-on: self-hosted
     needs: ci
     environment: producao
@@ -46,7 +46,7 @@ jobs:
           sudo -E docker compose -p receitas-prd -f docker-compose.prd.yml pull
           echo "::endgroup::"
 
-      - name: 🚀 Subir containers
+      - name: Subir containers
         working-directory: /home/univates/receitas-app
         run: |
           set -e

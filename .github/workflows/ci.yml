@@ -106,7 +106,7 @@ jobs:
       - name: Publicar resumo do lint
         if: always()
         run: |
-          echo "## 🔍 Análise de Qualidade (ESLint)" >> $GITHUB_STEP_SUMMARY
+          echo "## Análise de Qualidade (ESLint)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Módulo | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
@@ -181,7 +181,7 @@ jobs:
       - name: Publicar resumo do build
         if: always()
         run: |
-          echo "## 🐳 Imagens Docker Geradas" >> $GITHUB_STEP_SUMMARY
+          echo "## Imagens Docker Geradas" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Imagem | Tag |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|-----|" >> $GITHUB_STEP_SUMMARY

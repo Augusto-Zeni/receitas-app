@@ -54,8 +54,21 @@ jobs:
           export FRONTEND_IMAGE="${{ needs.ci.outputs.frontend-hml-image }}"
           export HML_JWT_SECRET="${{ secrets.HML_JWT_SECRET }}"
 
+          echo "::group::Resolver conflitos de containers"
+          for container in hml-db hml-backend hml-frontend; do
+            if sudo docker inspect "$container" &>/dev/null; then
+              project=$(sudo docker inspect "$container" --format '{{index .Config.Labels "com.docker.compose.project"}}' 2>/dev/null || echo "")
+              if [ "$project" != "receitas-hml" ]; then
+                echo "Removendo container conflitante: $container (projeto: ${project:-none})"
+                sudo docker stop "$container" 2>/dev/null || true
+                sudo docker rm "$container" 2>/dev/null || true
+              fi
+            fi
+          done
+          echo "::endgroup::"
+
           echo "::group::Docker Compose — subindo serviços"
-          sudo -E docker compose -p receitas-hml -f docker-compose.hml.yml up -d
+          sudo -E docker compose -p receitas-hml -f docker-compose.hml.yml up -d --remove-orphans
           echo "::endgroup::"
 
           echo "::group::Status dos containers"

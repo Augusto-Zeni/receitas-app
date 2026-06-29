@@ -72,7 +72,7 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::Status dos containers"
-          sudo docker compose -p receitas-prd -f docker-compose.prd.yml ps
+          sudo -E docker compose -p receitas-prd -f docker-compose.prd.yml ps
           echo "::endgroup::"
 
           echo "::notice title=Deploy PRD concluído::Ambiente de produção atualizado na porta 9001"

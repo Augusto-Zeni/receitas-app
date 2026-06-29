@@ -72,7 +72,7 @@ jobs:
           echo "::endgroup::"
 
           echo "::group::Status dos containers"
-          sudo docker compose -p receitas-hml -f docker-compose.hml.yml ps
+          sudo -E docker compose -p receitas-hml -f docker-compose.hml.yml ps
           echo "::endgroup::"
 
           echo "::notice title=Deploy HML concluído::Ambiente de homologação atualizado na porta 9000"

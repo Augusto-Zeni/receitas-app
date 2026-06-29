@@ -21,7 +21,9 @@ jobs:
     steps:
       - name: Login no GitHub Container Registry
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          AUTH=$(echo -n "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" | base64 -w 0)
+          sudo mkdir -p /root/.docker
+          echo "{\"auths\":{\"ghcr.io\":{\"auth\":\"${AUTH}\"}}}" | sudo tee /root/.docker/config.json > /dev/null
 
       - name: Atualizar código e pull das imagens
         working-directory: /home/univates/receitas-app

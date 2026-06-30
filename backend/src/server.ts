@@ -20,7 +20,7 @@ app.use('/receitas', receitasRoutes)
 app.use('/usuarios', usuariosRoutes)
 
 const server = app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`)
+  process.stdout.write(`Servidor rodando na porta ${PORT}\n`)
 })
 
 function shutdown() {

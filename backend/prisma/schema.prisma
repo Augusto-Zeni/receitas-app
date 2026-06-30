@@ -30,3 +30,10 @@ model Usuario {
 
   @@map("usuario")
 }
+
+model DemoApresentacao {
+  id    Int    @id @default(autoincrement())
+  titulo String
+
+  @@map("demo_apresentacao")
+}

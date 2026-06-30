@@ -6,7 +6,8 @@ const commonRules = {
   semi: ['error', 'never'],
   quotes: ['error', 'single'],
   'no-trailing-spaces': 'error',
-  'eol-last': ['error', 'always']
+  'eol-last': ['error', 'always'],
+  'no-console': 'error'
 }
 
 export default [

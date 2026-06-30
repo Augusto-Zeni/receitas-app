@@ -106,6 +106,7 @@ export default function Receitas() {
       const { data } = await api.get<Receita[]>('/receitas', { params })
       setReceitas(data)
     } catch {
+      // toast.error('Erro ao carregar receitas')
       toast.error('Erro ao carregar receitas')
     } finally {
       setLoading(false)

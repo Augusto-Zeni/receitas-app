@@ -88,8 +88,8 @@ else
     -v "$PROJECT_DIR:$PROJECT_DIR" \
     -e RUNNER_NAME="vm-univates-runner" \
     -e RUNNER_TOKEN="$RUNNER_TOKEN" \
-    -e RUNNER_REPO="https://github.com/${REPO_OWNER}/${REPO_NAME}" \
-    -e RUNNER_LABELS="self-hosted" \
+    -e REPO_URL="https://github.com/${REPO_OWNER}/${REPO_NAME}" \
+    -e LABELS="self-hosted" \
     -e RUNNER_WORKDIR="/tmp/runner-work" \
     "$RUNNER_IMAGE"
 

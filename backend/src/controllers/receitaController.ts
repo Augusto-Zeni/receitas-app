@@ -5,7 +5,6 @@ import { enviarEmailReceita } from '../services/emailService'
 const TIPOS_VALIDOS = ['D', 'S'] as const
 
 function parseId(param: string | string[]): number | null {
-  console.log('parseId', param)
   if (Array.isArray(param)) return null
   const id = Number(param)
   return Number.isInteger(id) && id > 0 ? id : null

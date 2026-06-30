@@ -244,6 +244,7 @@ export default function Receitas() {
       <header className="border-b border-border px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold">Receitas</h1>
+          {/* <h1 className="text-xl font-semibold">Receitas</h1> */}
           <EnvBadge />
         </div>
         <div className="flex items-center gap-3">

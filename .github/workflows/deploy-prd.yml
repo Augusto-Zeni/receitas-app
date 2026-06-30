@@ -35,6 +35,7 @@ jobs:
         run: |
           set -e
           echo "::group::Git — sincronizando branch main"
+          git config --global --add safe.directory /home/univates/receitas-app
           git fetch origin main
           git reset --hard origin/main
           echo "::endgroup::"

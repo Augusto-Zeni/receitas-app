@@ -44,7 +44,11 @@ jobs:
           export BACKEND_IMAGE="${{ needs.ci.outputs.backend-image }}"
           export FRONTEND_IMAGE="${{ needs.ci.outputs.frontend-hml-image }}"
           export HML_JWT_SECRET="${{ secrets.HML_JWT_SECRET }}"
-          sudo -E docker compose -p receitas-hml -f docker-compose.hml.yml pull
+          for attempt in 1 2 3; do
+            echo "Tentativa $attempt de 3..."
+            sudo -E docker compose -p receitas-hml -f docker-compose.hml.yml pull && break
+            [ $attempt -lt 3 ] && echo "Falhou, aguardando 15s..." && sleep 15
+          done
           echo "::endgroup::"
 
       - name: Subir containers

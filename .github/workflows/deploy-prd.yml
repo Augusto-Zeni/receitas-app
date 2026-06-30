@@ -44,7 +44,11 @@ jobs:
           export BACKEND_IMAGE="${{ needs.ci.outputs.backend-image }}"
           export FRONTEND_IMAGE="${{ needs.ci.outputs.frontend-prd-image }}"
           export PRD_JWT_SECRET="${{ secrets.PRD_JWT_SECRET }}"
-          sudo -E docker compose -p receitas-prd -f docker-compose.prd.yml pull
+          for attempt in 1 2 3; do
+            echo "Tentativa $attempt de 3..."
+            sudo -E docker compose -p receitas-prd -f docker-compose.prd.yml pull && break
+            [ $attempt -lt 3 ] && echo "Falhou, aguardando 15s..." && sleep 15
+          done
           echo "::endgroup::"
 
       - name: Subir containers

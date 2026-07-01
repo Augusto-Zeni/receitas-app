@@ -44,3 +44,10 @@ model TesteUm {
 
   @@map("teste_um")
 }
+
+model Categoria {
+  id     Int    @id @default(autoincrement())
+  titulo String
+
+  @@map("categoria")
+}

@@ -11,7 +11,6 @@ function parseId(param: string | string[]): number | null {
 }
 
 function parseDate(value: unknown): Date | null {
-  console.log('### teste')
   if (!value || typeof value !== 'string') return null
   const d = new Date(value)
   return isNaN(d.getTime()) ? null : d
